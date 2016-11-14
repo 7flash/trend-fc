@@ -4,6 +4,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "iostream"
 #include "math.h"
+#include "flat-worker.h"
 using namespace cv;
 using namespace std;
 
