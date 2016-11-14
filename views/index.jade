@@ -1,0 +1,13 @@
+extends layout
+
+block content
+  h1= title
+  form(method="POST", action="/upload", enctype="multipart/form-data")
+      div.input
+          span.label Cropped
+          input(type="file", name="cropped")
+      div.input
+          span.label Source
+          input(type="file", name="source")
+      div.actions
+          input(type="submit", value="Process")
