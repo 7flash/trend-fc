@@ -8,7 +8,7 @@
 using namespace cv;
 using namespace std;
 
-FlatWorker::Execute () {
+void FlatWorker::Execute () {
     int thresh1 = 240;
     int thresh2 = 240;
     int contourSizeMinFirst = 20000;
