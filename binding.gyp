@@ -2,7 +2,7 @@
    "targets": [
      {
        "target_name": "flat-contours",
-       "sources": [ "flat-contours.cpp" ],
+       "sources": [ "flat-contours.cpp", "flat-worker.cpp" ],
         "include_dirs": [
             "<!(node -e \"require('nan')\")",
         ]

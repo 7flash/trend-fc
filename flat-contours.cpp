@@ -1,35 +1,7 @@
-#ifndef _WIN32
-#include <unistd.h>
-#define Sleep(x) usleep((x)*1000)
-#endif
 #include <nan.h>
+#include "flat-worker.h"
 
 using namespace Nan;
-
-class SleepWorker : public AsyncWorker {
- public:
-  SleepWorker(Callback *callback, int milliseconds)
-    : AsyncWorker(callback), milliseconds(milliseconds) {}
-  ~SleepWorker() {}
-
-  void Execute () {
-	// this executes outside node main thread.
-	// Cannot call any v8 or nan objects and functions here,
-	// but we can run long C functions that would otherwise hold our main Thread
-    Sleep(milliseconds);
-  }
-
-  // its not necessay to implement this function,
-  // unless you want a diferent callback function to run,
-  // or pass some response to js
-  //virtual void HandleOKCallback()
-  //{
-  //callback->Call(0, NULL);
-  //}
-
- private:
-  int milliseconds;
-};
 
 class MyObject : public ObjectWrap {
  public:
@@ -42,7 +14,6 @@ class MyObject : public ObjectWrap {
   static NAN_METHOD(New);
   static NAN_METHOD(CallEmit);
   static NAN_METHOD(AsyncCallback);
-  static NAN_METHOD(StartLoop);
   static Persistent<v8::Function> constructor;
 };
 
@@ -50,7 +21,7 @@ struct async_event_data
 {
     uv_work_t request;
     std::string *event_name;
-	std::string *someArg;
+	  std::string *someArg;
 };
 
 Persistent<v8::Function> MyObject::constructor;
@@ -69,7 +40,6 @@ NAN_MODULE_INIT(MyObject::Init) {
 
   SetPrototypeMethod(tpl, "call_emit", CallEmit);
   SetPrototypeMethod(tpl, "processImages", AsyncCallback);
-  SetPrototypeMethod(tpl, "startLoop", StartLoop);
 
   constructor.Reset(tpl->GetFunction());
   Set(target, Nan::New("MyObject").ToLocalChecked(), tpl->GetFunction());
@@ -100,7 +70,7 @@ NAN_METHOD(MyObject::AsyncCallback) {
   // this function shows how we can do async work, outside the main thread,
   // and later raise a callback js function, that was passed as argument.
   Callback *callback = new Callback(info[1].As<v8::Function>());
-  AsyncQueueWorker(new SleepWorker(callback, To<uint32_t>(info[0]).FromJust()));
+  AsyncQueueWorker(new FlatWorker(callback, *Nan::Utf8String(info[0]), *Nan::Utf8String(info[1]), *Nan::Utf8String(info[2])));
 }
 
 MyObject* myObjectThreadLoop;
@@ -136,28 +106,6 @@ void emit_event() {
 
 	// here we schedule a function to be called on the main/node thread
 	uv_queue_work(uv_default_loop(), &asyncdata->request, noop_execute, reinterpret_cast<uv_after_work_cb>(callback_async_event));
-}
-
-void dumbthreadloop(void *n) {
-	while(true) {
-		// infinite loop where we just sleep for 2 seconds
-		Sleep(2000);
-		// then we wake, send a message to js land
-		emit_event();
-	}
-}
-
-NAN_METHOD(MyObject::StartLoop) {
-
-	if(myObjectThreadLoop) return ThrowError("cant call twice");
-
-	myObjectThreadLoop = Nan::ObjectWrap::Unwrap<MyObject>(info.Holder());
-
-	// i dont really know C++, could be a better way to do Threads.
-	// we will use this thread as a example how a thread could
-	// call JS functions. Useful when you are writing a driver/interface
-	// with hardware, messaging/queue servers, etc.
-	uv_thread_create(&mythread, dumbthreadloop, &threadnum);
 }
 
 NODE_MODULE(makecallback, MyObject::Init)

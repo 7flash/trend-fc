@@ -1,3 +1,4 @@
+#include <nan.h>
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -6,13 +7,7 @@
 using namespace cv;
 using namespace std;
 
-class FlatWorker {
- public:
-  FlatWorker(const char* croppedPath, const char* sourcePath, const char* resultPath)
-    : croppedPath(croppedPath), sourcePath(sourcePath), resultPath(resultPath) {}
-  ~FlatWorker() {}
-
-  void Execute () {
+FlatWorker::Execute () {
     int thresh1 = 240;
     int thresh2 = 240;
     int contourSizeMinFirst = 20000;
@@ -32,8 +27,8 @@ class FlatWorker {
     matchAnyWayLimitReal = (float)matchAnyWayLimit/1000;
     Mat src;
     Mat src2;
-    src = imread("part.jpg", CV_LOAD_IMAGE_COLOR);
-    src2 = imread("full.jpg", CV_LOAD_IMAGE_COLOR);
+    src = imread(this.croppedPath, CV_LOAD_IMAGE_COLOR);
+    src2 = imread(this.sourcePath, CV_LOAD_IMAGE_COLOR);
     Mat gray;
     Mat gray2;
     cvtColor(src, gray, CV_BGR2GRAY);
@@ -58,7 +53,7 @@ class FlatWorker {
     {
         if(contourArea(*it2) < contourSizeMinSecond || contourArea(*it2) > contourSizeMaxSecond) {
             it2 = contours2.erase(it2);
-        } 
+        }
         else
         {
             it2++;
@@ -111,10 +106,10 @@ class FlatWorker {
                     int X_Diff = it4->x - it3->x;
                     int Y_Diff = it4->y - it3->y;
                     int distance = sqrt((X_Diff * X_Diff) + (Y_Diff * Y_Diff));
-                    if(currentMinDistance == -1 || distance < currentMinDistance) currentMinDistance = distance;   
+                    if(currentMinDistance == -1 || distance < currentMinDistance) currentMinDistance = distance;
                 }
             }
-            if(currentMinDistance <= minDistance)        
+            if(currentMinDistance <= minDistance)
             {
                 if(find(contoursGroupped.begin(), contoursGroupped.end(), it2->second) == contoursGroupped.end())
                 {
@@ -141,7 +136,7 @@ class FlatWorker {
             convexHull(Mat(merged_contour_points), hull);
             Mat hull_points(hull);
             RotatedRect minRect = minAreaRect(hull_points);
-            Point2f rect_points[4]; 
+            Point2f rect_points[4];
             minRect.points(rect_points);
             rect_points[0].x -= rectMargin;
             rect_points[0].y += rectMargin;
@@ -159,31 +154,5 @@ class FlatWorker {
         }
     }
 
-    for(int i = 0; i < contours2.size(); i++)
-    {
-        Scalar color = Scalar(rng.uniform(0,255),rng.uniform(0,255),rng.uniform(0,255));
-        drawContours(drawing2, contours2, i, color, 1, 8);
-    }
-    for(int i = 0; i< contours.size(); i++)
-    {
-        Scalar color = Scalar(rng.uniform(0,255),rng.uniform(0,255),rng.uniform(0,255));
-        drawContours(drawing, contours, i, color, 1, 8);
-    }
-    for (map<int, int>::iterator it2 = matchContours.begin(); it2 != matchContours.end(); ++it2)
-    {
-        Scalar color = Scalar(255, 0, 0);
-        drawContours(drawing2, contours2, it2->second, color, 2, 8);
-    }
-}
-
- private:
-  const char* croppedPath;
-  const char* sourcePath;
-  const char* resultPath;
-};
-
-int main() {
-    FlatWorker* fc = new FlatWorker("part.jpg", "full.jpg", "result.jpg");
-    fc->Execute();
-    return 0;
+    imwrite(this.resultPath, src2);
 }
